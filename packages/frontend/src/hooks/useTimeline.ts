@@ -93,6 +93,24 @@ function formatDate(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
+function getRelativeTimeLabel(date: Date, startDate: string, granularity: Granularity): string {
+  const start = parseLocalDate(startDate)
+  const diffMs = date.getTime() - start.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  switch (granularity) {
+    case 'day':
+      // Ensure minimum of 1
+      return `DAY${Math.max(1, diffDays + 1)}`
+    case 'week':
+      const weekNum = Math.max(1, Math.floor(diffDays / 7) + 1)
+      return `WEEK${weekNum}`
+    case 'month':
+      const monthNum = Math.max(1, Math.floor(diffDays / 30) + 1)
+      return `MONTH${monthNum}`
+  }
+}
+
 export function useTimeline({
   items,
   startDate,
@@ -140,7 +158,10 @@ export function useTimeline({
       orientation: 'top',
       stack: true,
       margin: { item: 10 },
-      timeAxis: { scale: scale as 'day' | 'week' | 'month', step },
+      timeAxis: {
+        scale: scale as 'day' | 'week' | 'month',
+        step,
+      },
       onAdd: ((item: VisTimelineItem, callback: (item: VisTimelineItem | null) => void) => {
         const g = callbacksRef.current.granularity
         const snappedStart = clampToStart(snapToDay(item.start as Date), callbacksRef.current.startDate)
@@ -188,9 +209,62 @@ export function useTimeline({
       timeline.setSelection([props.item])
     })
 
+    // Update time labels to show relative format (WEEK1, DAY1, etc.)
+    const updateTimeLabels = () => {
+      if (!containerRef.current) return
+
+      const labels = containerRef.current.querySelectorAll('.vis-text')
+      const start = parseLocalDate(callbacksRef.current.startDate)
+      const gran = callbacksRef.current.granularity
+
+      labels.forEach((label) => {
+        const text = label.textContent?.trim()
+        if (!text || text.includes('2026') || text.includes('DAY') || text.includes('WEEK') || text.includes('MONTH')) return
+
+        let date: Date | null = null
+
+        // For month granularity, handle month names (Jan, Feb, Mar, etc.)
+        if (gran === 'month') {
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+          const monthIndex = monthNames.findIndex(m => text.includes(m))
+          if (monthIndex >= 0) {
+            date = new Date(start.getFullYear(), monthIndex, 1)
+          }
+        } else {
+          // For day and week granularity, parse the number
+          const num = parseInt(text)
+          if (!isNaN(num)) {
+            switch (gran) {
+              case 'day':
+                // num is the day of month, create date for that day
+                date = new Date(start.getFullYear(), start.getMonth(), num)
+                break
+              case 'week':
+                // For week view, labels show the first day of each week
+                date = new Date(start.getFullYear(), start.getMonth(), num)
+                break
+            }
+          }
+        }
+
+        if (date && !isNaN(date.getTime())) {
+          const relativeLabel = getRelativeTimeLabel(date, callbacksRef.current.startDate, gran)
+          label.textContent = relativeLabel
+        }
+      })
+    }
+
+    // Continuously update labels as vis-timeline may re-render them
+    const intervalId = setInterval(updateTimeLabels, 100)
+
+    // Also update on timeline events
+    timeline.on('rangechanged', updateTimeLabels)
+    timeline.on('changed', updateTimeLabels)
+
     timelineRef.current = timeline
 
     return () => {
+      clearInterval(intervalId)
       timeline.destroy()
       timelineRef.current = null
     }
