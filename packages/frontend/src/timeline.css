@@ -97,6 +97,8 @@
   font-size: 11px;
   margin-right: 0;
   margin-left: 0;
+  min-width: 60px;
+  text-align: left;
   position: relative;
   display: inline-block;
   clip-path: polygon(
@@ -112,6 +114,11 @@
 .vis-timeline .vis-time-axis .vis-text {
   margin: 0;
   padding: 0;
+}
+
+/* Hide major labels (month/year labels) to show only granularity labels */
+.vis-timeline .vis-time-axis .vis-text.vis-major {
+  display: none;
 }
 
 /* Today line styling */
