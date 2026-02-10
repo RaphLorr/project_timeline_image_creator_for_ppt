@@ -68,8 +68,16 @@
   display: none;
 }
 
+/* Long text displays outside the bar on the right side */
+.vis-timeline .vis-item.timeline-item-long {
+  overflow: visible !important;
+}
+
 .vis-timeline .vis-item.timeline-item-long .vis-item-content {
-  font-size: 11px;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  position: relative;
+  z-index: 10;
 }
 
 /* Hide group label column — groups are used for row layout only */

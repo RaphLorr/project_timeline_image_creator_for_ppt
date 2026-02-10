@@ -43,15 +43,16 @@ test.describe('Long Task Name Display', () => {
     await expect(tooltip).toContainText(LONG_TASK_NAME)
   })
 
-  test('long item gets smaller font class on timeline bar', async ({ page }) => {
+  test('long item text overflows beyond the bar', async ({ page }) => {
     await setupProjectAndAddLongItem(page)
 
     const timelineItem = page.locator('.vis-timeline .vis-item.timeline-item-long')
     await expect(timelineItem).toBeVisible({ timeout: 3000 })
 
-    // Verify the smaller font is applied
+    // Verify overflow is visible so text extends beyond the bar
     const content = timelineItem.locator('.vis-item-content')
-    await expect(content).toHaveCSS('font-size', '11px')
+    await expect(content).toHaveCSS('overflow', 'visible')
+    await expect(content).toHaveCSS('text-overflow', 'clip')
   })
 
   test('sidebar task card has title tooltip with full text', async ({ page }) => {
