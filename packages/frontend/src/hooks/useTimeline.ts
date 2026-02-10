@@ -252,6 +252,8 @@ export function useTimeline({
         if (date && !isNaN(date.getTime())) {
           const relativeLabel = getRelativeTimeLabel(date, callbacksRef.current.startDate, gran)
           label.textContent = relativeLabel
+          // Add class for styling
+          label.classList.add('tl-granularity-label')
         }
       })
     }

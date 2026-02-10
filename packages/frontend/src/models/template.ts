@@ -6,6 +6,9 @@ export interface TemplateStyles {
   readonly barRadius: number
   readonly fontFamily: string
   readonly fontSize: number
+  readonly granularityLabelBg: string
+  readonly granularityLabelText: string
+  readonly granularityLabelShape: 'arrow' | 'rectangle' | 'rounded'
 }
 
 export interface Template {
@@ -27,6 +30,9 @@ export const BUILTIN_TEMPLATES: readonly Template[] = [
       barRadius: 4,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: 13,
+      granularityLabelBg: '#3B82F6',
+      granularityLabelText: '#FFFFFF',
+      granularityLabelShape: 'arrow',
     },
     palette: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'],
   },
@@ -41,6 +47,9 @@ export const BUILTIN_TEMPLATES: readonly Template[] = [
       barRadius: 2,
       fontFamily: '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       fontSize: 12,
+      granularityLabelBg: '#1E3A5F',
+      granularityLabelText: '#FFFFFF',
+      granularityLabelShape: 'arrow',
     },
     palette: ['#1E3A5F', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD', '#1D4ED8', '#1E40AF'],
   },
@@ -55,6 +64,9 @@ export const BUILTIN_TEMPLATES: readonly Template[] = [
       barRadius: 6,
       fontFamily: '"Inter", "SF Pro Display", -apple-system, sans-serif',
       fontSize: 13,
+      granularityLabelBg: '#000000',
+      granularityLabelText: '#FFFFFF',
+      granularityLabelShape: 'arrow',
     },
     palette: ['#00D9FF', '#FF6B6B', '#FFE66D', '#4ECB71', '#A78BFA', '#FB923C', '#F472B6'],
   },
@@ -78,5 +90,8 @@ export function templateToCSSVars(template: Template): Record<string, string> {
     '--tl-bar-radius': `${styles.barRadius}px`,
     '--tl-font-family': styles.fontFamily,
     '--tl-font-size': `${styles.fontSize}px`,
+    '--tl-granularity-bg': styles.granularityLabelBg,
+    '--tl-granularity-text': styles.granularityLabelText,
+    '--tl-granularity-shape': styles.granularityLabelShape,
   }
 }

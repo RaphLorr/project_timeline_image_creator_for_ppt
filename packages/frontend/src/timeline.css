@@ -88,6 +88,26 @@
   overflow: hidden;
 }
 
+/* Granularity labels (DAY1, WEEK1, MONTH1, etc.) styling */
+.vis-timeline .vis-text.tl-granularity-label {
+  background-color: var(--tl-granularity-bg, #000000);
+  color: var(--tl-granularity-text, #FFFFFF);
+  padding: 4px 12px 4px 8px;
+  font-weight: 600;
+  font-size: 11px;
+  margin-right: 4px;
+  position: relative;
+  display: inline-block;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 8px) 0,
+    100% 50%,
+    calc(100% - 8px) 100%,
+    0 100%
+  );
+  padding-right: 16px;
+}
+
 /* Today line styling */
 .vis-timeline .vis-current-time {
   background-color: #ef4444 !important;
