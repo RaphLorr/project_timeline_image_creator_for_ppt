@@ -242,8 +242,15 @@ export function useTimeline({
                 date = new Date(start.getFullYear(), start.getMonth(), num)
                 break
               case 'week':
-                // For week view, labels show the first day of each week
-                date = new Date(start.getFullYear(), start.getMonth(), num)
+                // For week view, labels show week numbers or dates
+                // Parse from the label's data-time attribute if available
+                const timeAttr = label.getAttribute('data-time')
+                if (timeAttr) {
+                  date = new Date(parseInt(timeAttr))
+                } else {
+                  // Fallback: assume num is day of month
+                  date = new Date(start.getFullYear(), start.getMonth(), num)
+                }
                 break
             }
           }

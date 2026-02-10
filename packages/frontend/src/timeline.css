@@ -92,10 +92,11 @@
 .vis-timeline .vis-text.tl-granularity-label {
   background-color: var(--tl-granularity-bg, #000000);
   color: var(--tl-granularity-text, #FFFFFF);
-  padding: 4px 12px 4px 8px;
+  padding: 4px 14px 4px 8px;
   font-weight: 600;
   font-size: 11px;
-  margin-right: 4px;
+  margin-right: 0;
+  margin-left: 0;
   position: relative;
   display: inline-block;
   clip-path: polygon(
@@ -105,7 +106,12 @@
     calc(100% - 8px) 100%,
     0 100%
   );
-  padding-right: 16px;
+}
+
+/* Make time axis labels fill the width */
+.vis-timeline .vis-time-axis .vis-text {
+  margin: 0;
+  padding: 0;
 }
 
 /* Today line styling */
