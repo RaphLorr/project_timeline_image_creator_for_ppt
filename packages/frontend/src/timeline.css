@@ -87,3 +87,25 @@
   border: none !important;
   overflow: hidden;
 }
+
+/* Today line styling */
+.vis-timeline .vis-current-time {
+  background-color: #ef4444 !important;
+  width: 2px !important;
+  z-index: 100;
+}
+
+.vis-timeline .vis-current-time::after {
+  content: 'Today';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background-color: #ef4444;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 101;
+}

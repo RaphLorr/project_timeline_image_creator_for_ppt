@@ -158,6 +158,7 @@ export function useTimeline({
       orientation: 'top',
       stack: true,
       margin: { item: 10 },
+      showCurrentTime: true,
       timeAxis: {
         scale: scale as 'day' | 'week' | 'month',
         step,
@@ -219,6 +220,7 @@ export function useTimeline({
 
       labels.forEach((label) => {
         const text = label.textContent?.trim()
+        // Skip year labels and already converted labels
         if (!text || text.includes('2026') || text.includes('DAY') || text.includes('WEEK') || text.includes('MONTH')) return
 
         let date: Date | null = null
