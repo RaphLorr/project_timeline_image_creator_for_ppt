@@ -93,6 +93,14 @@ function formatDate(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
+function getISOWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+}
+
 function getRelativeTimeLabel(date: Date, startDate: string, granularity: Granularity): string {
   const start = parseLocalDate(startDate)
   const diffMs = date.getTime() - start.getTime()
@@ -100,7 +108,6 @@ function getRelativeTimeLabel(date: Date, startDate: string, granularity: Granul
 
   switch (granularity) {
     case 'day':
-      // Ensure minimum of 1
       return `DAY${Math.max(1, diffDays + 1)}`
     case 'week':
       const weekNum = Math.max(1, Math.floor(diffDays / 7) + 1)
@@ -214,52 +221,60 @@ export function useTimeline({
     const updateTimeLabels = () => {
       if (!containerRef.current) return
 
-      const labels = containerRef.current.querySelectorAll('.vis-text')
+      const labels = containerRef.current.querySelectorAll('.vis-text.vis-minor')
       const start = parseLocalDate(callbacksRef.current.startDate)
       const gran = callbacksRef.current.granularity
+      const startISOWeek = getISOWeekNumber(start)
 
       labels.forEach((label) => {
-        const text = label.textContent?.trim()
-        // Skip year labels and already converted labels
-        if (!text || text.includes('2026') || text.includes('DAY') || text.includes('WEEK') || text.includes('MONTH')) return
+        if (label.classList.contains('vis-measure')) return
+        const text = label.textContent?.trim() ?? ''
+        // Skip already converted labels
+        if (text.includes('DAY') || text.includes('WEEK') || text.includes('MONTH')) return
 
-        let date: Date | null = null
+        let relativeLabel: string | null = null
 
-        // For month granularity, handle month names (Jan, Feb, Mar, etc.)
-        if (gran === 'month') {
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-          const monthIndex = monthNames.findIndex(m => text.includes(m))
-          if (monthIndex >= 0) {
-            date = new Date(start.getFullYear(), monthIndex, 1)
-          }
-        } else {
-          // For day and week granularity, parse the number
-          const num = parseInt(text)
-          if (!isNaN(num)) {
-            switch (gran) {
-              case 'day':
-                // num is the day of month, create date for that day
-                date = new Date(start.getFullYear(), start.getMonth(), num)
-                break
-              case 'week':
-                // For week view, labels show week numbers or dates
-                // Parse from the label's data-time attribute if available
-                const timeAttr = label.getAttribute('data-time')
-                if (timeAttr) {
-                  date = new Date(parseInt(timeAttr))
-                } else {
-                  // Fallback: assume num is day of month
-                  date = new Date(start.getFullYear(), start.getMonth(), num)
-                }
-                break
+        switch (gran) {
+          case 'week': {
+            // vis-timeline adds CSS class vis-weekN (ISO week number)
+            const weekClassMatch = label.className.match(/vis-week(\d+)/)
+            if (weekClassMatch) {
+              const isoWeek = parseInt(weekClassMatch[1])
+              let relWeek = isoWeek - startISOWeek + 1
+              if (relWeek <= 0) relWeek += 52 // year boundary
+              if (text === '') {
+                // Empty label = second half of a week split at month boundary
+                // Just apply background styling, no text
+                label.classList.add('tl-granularity-label-bg')
+              } else {
+                relativeLabel = `WEEK${relWeek}`
+              }
             }
+            break
+          }
+          case 'month': {
+            if (!text) break
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            const monthIndex = monthNames.findIndex(m => text.includes(m))
+            if (monthIndex >= 0) {
+              const date = new Date(start.getFullYear(), monthIndex, 1)
+              relativeLabel = getRelativeTimeLabel(date, callbacksRef.current.startDate, gran)
+            }
+            break
+          }
+          case 'day': {
+            if (!text) break
+            const num = parseInt(text)
+            if (!isNaN(num)) {
+              const date = new Date(start.getFullYear(), start.getMonth(), num)
+              relativeLabel = getRelativeTimeLabel(date, callbacksRef.current.startDate, gran)
+            }
+            break
           }
         }
 
-        if (date && !isNaN(date.getTime())) {
-          const relativeLabel = getRelativeTimeLabel(date, callbacksRef.current.startDate, gran)
+        if (relativeLabel) {
           label.textContent = relativeLabel
-          // Add class for styling
           label.classList.add('tl-granularity-label')
         }
       })

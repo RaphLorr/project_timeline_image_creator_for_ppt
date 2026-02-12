@@ -18,11 +18,19 @@
 }
 
 .vis-timeline .vis-time-axis .vis-grid.vis-minor {
+  border-width: 1px;
   border-color: var(--tl-grid, #e5e7eb);
 }
 
 .vis-timeline .vis-time-axis .vis-grid.vis-major {
   border-color: var(--tl-grid, #e5e7eb);
+}
+
+/* In the foreground panel, collapse adjacent grid borders so week
+   boundaries share a single line instead of showing a double line. */
+.vis-timeline .vis-panel.vis-center .vis-grid.vis-minor {
+  border-left-width: 1px;
+  border-right-width: 0;
 }
 
 .vis-timeline .vis-item {
@@ -88,26 +96,26 @@
   overflow: hidden;
 }
 
-/* Granularity labels (DAY1, WEEK1, MONTH1, etc.) styling */
+/* Granularity labels (DAY1, WEEK1, MONTH1, etc.) — arrow shape */
 .vis-timeline .vis-text.tl-granularity-label {
-  background-color: var(--tl-granularity-bg, #000000);
+  background-color: var(--tl-granularity-bg, #3B82F6);
   color: var(--tl-granularity-text, #FFFFFF);
   padding: 4px 14px 4px 8px;
   font-weight: 600;
   font-size: 11px;
-  margin-right: 0;
-  margin-left: 0;
-  min-width: 60px;
-  text-align: left;
-  position: relative;
-  display: inline-block;
+  white-space: nowrap;
   clip-path: polygon(
     0 0,
-    calc(100% - 8px) 0,
+    calc(100% - 10px) 0,
     100% 50%,
-    calc(100% - 8px) 100%,
+    calc(100% - 10px) 100%,
     0 100%
   );
+}
+
+/* Background-only label for split weeks at month boundaries */
+.vis-timeline .vis-text.tl-granularity-label-bg {
+  background-color: var(--tl-granularity-bg, #3B82F6);
 }
 
 /* Make time axis labels fill the width */
@@ -118,7 +126,7 @@
 
 /* Hide major labels (month/year labels) to show only granularity labels */
 .vis-timeline .vis-time-axis .vis-text.vis-major {
-  display: none;
+  display: none !important;
 }
 
 /* Today line styling */
