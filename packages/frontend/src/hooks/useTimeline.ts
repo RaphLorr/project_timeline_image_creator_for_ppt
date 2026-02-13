@@ -115,16 +115,16 @@ function expandToFullPeriod(
     case 'day':
       return { expandedStart: start, expandedEnd: end }
     case 'week': {
-      // Expand start to Monday of that week (ISO week starts Monday)
+      // Expand start to Sunday before that week's Monday (extra day for label visibility)
       const startDay = start.getDay() // 0=Sun,1=Mon,...6=Sat
-      const mondayOffset = startDay === 0 ? -6 : 1 - startDay
+      const sundayBeforeOffset = startDay === 0 ? -7 : -startDay
       const expandedStart = new Date(start)
-      expandedStart.setDate(expandedStart.getDate() + mondayOffset)
-      // Expand end to Sunday of that week
+      expandedStart.setDate(expandedStart.getDate() + sundayBeforeOffset)
+      // Expand end to Sunday of that week (+ 1 day for label visibility)
       const endDay = end.getDay()
       const sundayOffset = endDay === 0 ? 0 : 7 - endDay
       const expandedEnd = new Date(end)
-      expandedEnd.setDate(expandedEnd.getDate() + sundayOffset)
+      expandedEnd.setDate(expandedEnd.getDate() + sundayOffset + 1)
       return { expandedStart, expandedEnd }
     }
     case 'month': {
@@ -166,6 +166,7 @@ export function useTimeline({
   onItemRemove,
 }: UseTimelineParams) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const dateLabelRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<Timeline | null>(null)
   const datasetRef = useRef<DataSet<VisItem>>(new DataSet())
   const groupsRef = useRef<DataSet<VisGroup>>(new DataSet([{ id: 0, content: '' }]))
@@ -243,40 +244,9 @@ export function useTimeline({
       options as TimelineOptions
     )
 
-    // Add project start and end marker lines with date labels
+    // Add project start and end marker lines
     timeline.addCustomTime(parseLocalDate(startDate), 'project-start')
     timeline.addCustomTime(parseLocalDate(endDate), 'project-end')
-
-    // Add date labels to marker lines after DOM renders
-    setTimeout(() => {
-      if (!containerRef.current) return
-      const markers = containerRef.current.querySelectorAll('.vis-custom-time')
-      markers.forEach((el, idx) => {
-        const bar = el as HTMLElement
-        bar.style.pointerEvents = 'none'
-        bar.style.cursor = 'default'
-
-        const label = document.createElement('div')
-        label.className = 'project-marker-label'
-        label.textContent = idx === 0 ? startDate : endDate
-
-        label.style.cssText = `
-          position: absolute;
-          top: 2px;
-          left: 50%;
-          transform: translateX(-50%);
-          background-color: #2563EB;
-          color: white;
-          padding: 2px 6px;
-          border-radius: 3px;
-          font-size: 10px;
-          font-weight: 600;
-          white-space: nowrap;
-          z-index: 200;
-        `
-        bar.appendChild(label)
-      })
-    }, 100)
 
     timeline.on('select', (props: { items: string[] }) => {
       const id = props.items.length > 0 ? props.items[0] : null
@@ -290,6 +260,7 @@ export function useTimeline({
     })
 
     // Update time labels to show relative format (WEEK1, DAY1, etc.)
+    // and sync date label positions above the timeline
     const updateTimeLabels = () => {
       if (!containerRef.current) return
 
@@ -298,17 +269,17 @@ export function useTimeline({
       const gran = callbacksRef.current.granularity
       const startISOWeek = getISOWeekNumber(start)
 
-      // Build a map of week numbers to their label elements for split detection
-      const weekLabelsMap = new Map<number, Element[]>()
+      // Track which ISO weeks we've already labelled (for week continuations at month boundaries)
+      const labelledWeeks = new Set<number>()
+      // Pre-scan to detect split weeks (same ISO week appearing multiple times)
+      const weekCount = new Map<number, number>()
       if (gran === 'week') {
-        labels.forEach((label) => {
-          if (label.classList.contains('vis-measure')) return
-          const m = label.className.match(/vis-week(\d+)/)
+        labels.forEach((l) => {
+          if (l.classList.contains('vis-measure')) return
+          const m = l.className.match(/vis-week(\d+)/)
           if (m) {
             const wk = parseInt(m[1])
-            const arr = weekLabelsMap.get(wk) ?? []
-            arr.push(label)
-            weekLabelsMap.set(wk, arr)
+            weekCount.set(wk, (weekCount.get(wk) ?? 0) + 1)
           }
         })
       }
@@ -319,7 +290,7 @@ export function useTimeline({
         // Skip already converted labels
         if (text.includes('DAY') || text.includes('WEEK') || text.includes('MONTH')) return
         // Skip already styled continuation labels
-        if (label.classList.contains('tl-granularity-label-bg')) return
+        if (label.classList.contains('tl-granularity-continuation')) return
 
         let relativeLabel: string | null = null
 
@@ -328,20 +299,19 @@ export function useTimeline({
             const weekClassMatch = label.className.match(/vis-week(\d+)/)
             if (weekClassMatch) {
               const isoWeek = parseInt(weekClassMatch[1])
+              if (labelledWeeks.has(isoWeek)) {
+                // Continuation at month boundary — arrow shape, bg only, no text
+                label.textContent = ''
+                label.classList.add('tl-granularity-continuation')
+                break
+              }
+              labelledWeeks.add(isoWeek)
               let relWeek = isoWeek - startISOWeek + 1
               if (relWeek <= 0) relWeek += 52
-              const siblings = weekLabelsMap.get(isoWeek) ?? []
-              const isSplit = siblings.length > 1
-
-              if (text === '') {
-                // Continuation half — arrow shape, bg only, no text
-                label.classList.add('tl-granularity-label-bg')
-              } else if (isSplit) {
-                // First half of split week — flat right edge (no arrow)
-                relativeLabel = `WEEK${relWeek}`
+              relativeLabel = `WEEK${relWeek}`
+              // Split week → flat right edge so it seamlessly joins the continuation
+              if ((weekCount.get(isoWeek) ?? 1) > 1) {
                 label.classList.add('tl-granularity-label-flat')
-              } else {
-                relativeLabel = `WEEK${relWeek}`
               }
             }
             break
@@ -369,12 +339,39 @@ export function useTimeline({
 
         if (relativeLabel) {
           label.textContent = relativeLabel
-          // Don't add arrow class if flat variant is already set (split week first-half)
+          // Don't add arrow class if flat variant is set (split week first half)
           if (!label.classList.contains('tl-granularity-label-flat')) {
             label.classList.add('tl-granularity-label')
           }
         }
       })
+
+      // Sync date label positions from custom time markers
+      if (dateLabelRef.current && containerRef.current) {
+        const markers = containerRef.current.querySelectorAll('.vis-custom-time')
+        const containerRect = containerRef.current.getBoundingClientRect()
+
+        // Ensure we have exactly 2 label elements
+        let labelEls = dateLabelRef.current.querySelectorAll('.project-date-label')
+        if (labelEls.length === 0) {
+          const dates = [callbacksRef.current.startDate, endDate]
+          dates.forEach((d) => {
+            const el = document.createElement('div')
+            el.className = 'project-date-label'
+            el.textContent = d
+            dateLabelRef.current!.appendChild(el)
+          })
+          labelEls = dateLabelRef.current.querySelectorAll('.project-date-label')
+        }
+
+        markers.forEach((marker, idx) => {
+          if (idx >= labelEls.length) return
+          const markerRect = marker.getBoundingClientRect()
+          const leftPx = markerRect.left - containerRect.left + markerRect.width / 2
+          const labelEl = labelEls[idx] as HTMLElement
+          labelEl.style.left = `${leftPx}px`
+        })
+      }
     }
 
     // Continuously update labels as vis-timeline may re-render them
@@ -465,6 +462,7 @@ export function useTimeline({
 
   return {
     containerRef,
+    dateLabelRef,
     selectedId,
   }
 }

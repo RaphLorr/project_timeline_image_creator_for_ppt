@@ -17,20 +17,15 @@
   font-size: var(--tl-font-size, 13px);
 }
 
-.vis-timeline .vis-time-axis .vis-grid.vis-minor {
+.vis-timeline .vis-grid.vis-minor {
   border-width: 1px;
   border-color: var(--tl-grid, #e5e7eb);
-}
-
-.vis-timeline .vis-time-axis .vis-grid.vis-major {
-  border-color: var(--tl-grid, #e5e7eb);
-}
-
-/* In the foreground panel, collapse adjacent grid borders so week
-   boundaries share a single line instead of showing a double line. */
-.vis-timeline .vis-panel.vis-center .vis-grid.vis-minor {
-  border-left-width: 1px;
   border-right-width: 0;
+}
+
+/* Hide major grid lines (month boundaries) everywhere — weeks are continuous */
+.vis-timeline .vis-grid.vis-major {
+  border-color: transparent !important;
 }
 
 .vis-timeline .vis-item {
@@ -47,7 +42,6 @@
 .vis-timeline .vis-item:hover {
   filter: brightness(1.05);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  ring: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .vis-timeline .vis-item .vis-item-overflow {
@@ -96,14 +90,16 @@
   overflow: hidden;
 }
 
+
 /* Granularity labels (DAY1, WEEK1, MONTH1, etc.) — arrow shape */
 .vis-timeline .vis-text.tl-granularity-label {
   background-color: var(--tl-granularity-bg, #3B82F6);
   color: var(--tl-granularity-text, #FFFFFF);
-  padding: 4px 14px 4px 8px;
+  padding: 4px 14px 4px 4px;
   font-weight: 600;
   font-size: 11px;
   white-space: nowrap;
+  text-align: center;
   clip-path: polygon(
     0 0,
     calc(100% - 10px) 0,
@@ -113,7 +109,8 @@
   );
 }
 
-/* First half of a split week at month boundary — flat right edge */
+
+/* First half of a split week — flat right edge, seamlessly joins continuation */
 .vis-timeline .vis-text.tl-granularity-label-flat {
   background-color: var(--tl-granularity-bg, #3B82F6);
   color: var(--tl-granularity-text, #FFFFFF);
@@ -121,11 +118,11 @@
   font-weight: 600;
   font-size: 11px;
   white-space: nowrap;
-  /* No clip-path — flat right edge so continuation connects seamlessly */
+  text-align: center;
 }
 
-/* Continuation half of a split week — arrow shape, no text */
-.vis-timeline .vis-text.tl-granularity-label-bg {
+/* Continuation of a split week — arrow shape, background only, no text */
+.vis-timeline .vis-text.tl-granularity-continuation {
   background-color: var(--tl-granularity-bg, #3B82F6);
   min-height: 100%;
   height: 100%;
@@ -144,7 +141,7 @@
   padding: 0;
 }
 
-/* Hide major labels (month/year labels) to show only granularity labels */
+/* Hide major labels (month/year) to show only granularity labels */
 .vis-timeline .vis-time-axis .vis-text.vis-major {
   display: none !important;
 }
@@ -156,4 +153,20 @@
   z-index: 100;
   pointer-events: none !important;
   cursor: default !important;
+}
+
+/* Date label badge in the row above the timeline */
+.project-date-label {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #2563EB;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 200;
+  pointer-events: none;
 }

@@ -22,7 +22,7 @@ export function TimelineCanvas({
   onItemRemove,
   exportRef,
 }: TimelineCanvasProps) {
-  const { containerRef } = useTimeline({
+  const { containerRef, dateLabelRef } = useTimeline({
     items: project.items as TimelineItem[],
     startDate: project.startDate,
     endDate: project.endDate,
@@ -49,13 +49,18 @@ export function TimelineCanvas({
       />
       <div
         ref={exportRef}
-        className="relative rounded-xl overflow-hidden border border-slate-200 shadow-sm h-full"
+        className="relative rounded-xl overflow-hidden border border-slate-200 shadow-sm h-full flex flex-col"
         style={{ backgroundColor: template.styles.backgroundColor }}
       >
+        {/* Date labels row above week labels */}
+        <div
+          ref={dateLabelRef}
+          className="relative h-6 shrink-0"
+        />
         <div
           ref={containerRef}
           data-testid="timeline-container"
-          className="h-full min-h-[300px]"
+          className="flex-1 min-h-[300px]"
         />
       </div>
     </div>
