@@ -243,9 +243,40 @@ export function useTimeline({
       options as TimelineOptions
     )
 
-    // Add project start and end marker lines
+    // Add project start and end marker lines with date labels
     timeline.addCustomTime(parseLocalDate(startDate), 'project-start')
     timeline.addCustomTime(parseLocalDate(endDate), 'project-end')
+
+    // Add date labels to marker lines after DOM renders
+    setTimeout(() => {
+      if (!containerRef.current) return
+      const markers = containerRef.current.querySelectorAll('.vis-custom-time')
+      markers.forEach((el, idx) => {
+        const bar = el as HTMLElement
+        bar.style.pointerEvents = 'none'
+        bar.style.cursor = 'default'
+
+        const label = document.createElement('div')
+        label.className = 'project-marker-label'
+        label.textContent = idx === 0 ? startDate : endDate
+
+        label.style.cssText = `
+          position: absolute;
+          top: 2px;
+          left: 50%;
+          transform: translateX(-50%);
+          background-color: #2563EB;
+          color: white;
+          padding: 2px 6px;
+          border-radius: 3px;
+          font-size: 10px;
+          font-weight: 600;
+          white-space: nowrap;
+          z-index: 200;
+        `
+        bar.appendChild(label)
+      })
+    }, 100)
 
     timeline.on('select', (props: { items: string[] }) => {
       const id = props.items.length > 0 ? props.items[0] : null
@@ -267,26 +298,48 @@ export function useTimeline({
       const gran = callbacksRef.current.granularity
       const startISOWeek = getISOWeekNumber(start)
 
+      // Build a map of week numbers to their label elements for split detection
+      const weekLabelsMap = new Map<number, Element[]>()
+      if (gran === 'week') {
+        labels.forEach((label) => {
+          if (label.classList.contains('vis-measure')) return
+          const m = label.className.match(/vis-week(\d+)/)
+          if (m) {
+            const wk = parseInt(m[1])
+            const arr = weekLabelsMap.get(wk) ?? []
+            arr.push(label)
+            weekLabelsMap.set(wk, arr)
+          }
+        })
+      }
+
       labels.forEach((label) => {
         if (label.classList.contains('vis-measure')) return
         const text = label.textContent?.trim() ?? ''
         // Skip already converted labels
         if (text.includes('DAY') || text.includes('WEEK') || text.includes('MONTH')) return
+        // Skip already styled continuation labels
+        if (label.classList.contains('tl-granularity-label-bg')) return
 
         let relativeLabel: string | null = null
 
         switch (gran) {
           case 'week': {
-            // vis-timeline adds CSS class vis-weekN (ISO week number)
             const weekClassMatch = label.className.match(/vis-week(\d+)/)
             if (weekClassMatch) {
               const isoWeek = parseInt(weekClassMatch[1])
               let relWeek = isoWeek - startISOWeek + 1
-              if (relWeek <= 0) relWeek += 52 // year boundary
+              if (relWeek <= 0) relWeek += 52
+              const siblings = weekLabelsMap.get(isoWeek) ?? []
+              const isSplit = siblings.length > 1
+
               if (text === '') {
-                // Empty label = second half of a week split at month boundary
-                // Just apply background styling, no text
+                // Continuation half — arrow shape, bg only, no text
                 label.classList.add('tl-granularity-label-bg')
+              } else if (isSplit) {
+                // First half of split week — flat right edge (no arrow)
+                relativeLabel = `WEEK${relWeek}`
+                label.classList.add('tl-granularity-label-flat')
               } else {
                 relativeLabel = `WEEK${relWeek}`
               }
@@ -316,7 +369,10 @@ export function useTimeline({
 
         if (relativeLabel) {
           label.textContent = relativeLabel
-          label.classList.add('tl-granularity-label')
+          // Don't add arrow class if flat variant is already set (split week first-half)
+          if (!label.classList.contains('tl-granularity-label-flat')) {
+            label.classList.add('tl-granularity-label')
+          }
         }
       })
     }

@@ -113,9 +113,29 @@
   );
 }
 
-/* Background-only label for split weeks at month boundaries */
+/* First half of a split week at month boundary — flat right edge */
+.vis-timeline .vis-text.tl-granularity-label-flat {
+  background-color: var(--tl-granularity-bg, #3B82F6);
+  color: var(--tl-granularity-text, #FFFFFF);
+  padding: 4px 8px;
+  font-weight: 600;
+  font-size: 11px;
+  white-space: nowrap;
+  /* No clip-path — flat right edge so continuation connects seamlessly */
+}
+
+/* Continuation half of a split week — arrow shape, no text */
 .vis-timeline .vis-text.tl-granularity-label-bg {
   background-color: var(--tl-granularity-bg, #3B82F6);
+  min-height: 100%;
+  height: 100%;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 50%,
+    calc(100% - 10px) 100%,
+    0 100%
+  );
 }
 
 /* Make time axis labels fill the width */
