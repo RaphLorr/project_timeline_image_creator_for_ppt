@@ -101,6 +101,42 @@ function getISOWeekNumber(date: Date): number {
   return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
 }
 
+// Expand start/end dates to include the full granularity period.
+// e.g. if project starts Wed and granularity is 'week', expand start to Monday of that week.
+function expandToFullPeriod(
+  startDate: string,
+  endDate: string,
+  granularity: Granularity
+): { expandedStart: Date; expandedEnd: Date } {
+  const start = parseLocalDate(startDate)
+  const end = parseLocalDate(endDate)
+
+  switch (granularity) {
+    case 'day':
+      return { expandedStart: start, expandedEnd: end }
+    case 'week': {
+      // Expand start to Monday of that week (ISO week starts Monday)
+      const startDay = start.getDay() // 0=Sun,1=Mon,...6=Sat
+      const mondayOffset = startDay === 0 ? -6 : 1 - startDay
+      const expandedStart = new Date(start)
+      expandedStart.setDate(expandedStart.getDate() + mondayOffset)
+      // Expand end to Sunday of that week
+      const endDay = end.getDay()
+      const sundayOffset = endDay === 0 ? 0 : 7 - endDay
+      const expandedEnd = new Date(end)
+      expandedEnd.setDate(expandedEnd.getDate() + sundayOffset)
+      return { expandedStart, expandedEnd }
+    }
+    case 'month': {
+      // Expand start to 1st of that month
+      const expandedStart = new Date(start.getFullYear(), start.getMonth(), 1)
+      // Expand end to last day of that month
+      const expandedEnd = new Date(end.getFullYear(), end.getMonth() + 1, 0)
+      return { expandedStart, expandedEnd }
+    }
+  }
+}
+
 function getRelativeTimeLabel(date: Date, startDate: string, granularity: Granularity): string {
   const start = parseLocalDate(startDate)
   const diffMs = date.getTime() - start.getTime()
@@ -145,6 +181,7 @@ export function useTimeline({
     if (!containerRef.current) return
 
     const { scale, step } = getTimeAxisScale(granularity)
+    const { expandedStart, expandedEnd } = expandToFullPeriod(startDate, endDate, granularity)
 
     const options: TimelineOptions = {
       height: '300px',
@@ -156,16 +193,16 @@ export function useTimeline({
         remove: true,
       },
       snap: (date: Date) => clampToStart(snapToDay(date), callbacksRef.current.startDate),
-      start: parseLocalDate(startDate),
-      end: parseLocalDate(endDate),
-      min: parseLocalDate(startDate),
-      max: parseLocalDate(endDate),
+      start: expandedStart,
+      end: expandedEnd,
+      min: expandedStart,
+      max: expandedEnd,
       zoomMin: 1000 * 60 * 60 * 24,
       zoomMax: 1000 * 60 * 60 * 24 * 365 * 2,
       orientation: 'top',
       stack: true,
       margin: { item: 10 },
-      showCurrentTime: true,
+      showCurrentTime: false,
       timeAxis: {
         scale: scale as 'day' | 'week' | 'month',
         step,
@@ -205,6 +242,10 @@ export function useTimeline({
       groupsRef.current,
       options as TimelineOptions
     )
+
+    // Add project start and end marker lines
+    timeline.addCustomTime(parseLocalDate(startDate), 'project-start')
+    timeline.addCustomTime(parseLocalDate(endDate), 'project-end')
 
     timeline.on('select', (props: { items: string[] }) => {
       const id = props.items.length > 0 ? props.items[0] : null
